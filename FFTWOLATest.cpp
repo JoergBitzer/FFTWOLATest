@@ -4,7 +4,7 @@
 #include "PluginProcessor.h"
 
 FFTWOLATestAudio::FFTWOLATestAudio(FFTWOLATestAudioProcessor* processor)
-:SynchronBlockProcessor(), m_processor(processor)
+:WOLA(), m_processor(processor)
 {
 }
 
@@ -18,17 +18,58 @@ void FFTWOLATestAudio::prepareToPlay(double sampleRate, int max_samplesPerBlock,
         int nextpowerof2 = int(log2(synchronblocksize))+1;
         synchronblocksize = int(pow(2,nextpowerof2));
     }
-    prepareSynchronProcessing(max_channels,synchronblocksize);
+    m_synchronblocksize = synchronblocksize;
+    //prepareSynchronProcessing(max_channels,synchronblocksize);
+    prepareWOLAprocessing(max_channels,synchronblocksize,WOLA::WOLAType::SqrtHann_over50);
     m_Latency += synchronblocksize;
+
+
     // here your code
+    m_fftprocess.setFFTSize(synchronblocksize);
+    m_realdata.setSize(max_channels,synchronblocksize/2+1);
+    m_imagdata.setSize(max_channels,synchronblocksize/2+1);
 
 }
 
-int FFTWOLATestAudio::processSynchronBlock(juce::AudioBuffer<float> & buffer, juce::MidiBuffer &midiMessages, int NrOfBlocksSinceLastProcessBlock)
+int FFTWOLATestAudio::processWOLA(juce::AudioBuffer<float> &data, juce::MidiBuffer &midiMessages)
+{
+    int numchns = data.getNumChannels();
+
+    for (int cc = 0 ; cc < numchns; cc++)
+    {
+    // FFT 
+        auto dataPtr = data.getWritePointer(cc);
+        auto realPtr = m_realdata.getWritePointer(cc);
+        auto imagPtr = m_imagdata.getWritePointer(cc);
+        m_fftprocess.fft(dataPtr,realPtr,imagPtr);
+
+    // spectrum change (all phases to zero)
+        for (int nn = 0; nn< m_synchronblocksize/2+1; nn++)
+        {
+            float absval = sqrtf(realPtr[nn]*realPtr[nn] + imagPtr[nn]*imagPtr[nn]);
+            float phase = atan2f(imagPtr[nn],realPtr[nn]);
+
+            if (nn>30)
+                absval = 0.f;
+
+            // rück
+            realPtr[nn] = absval*cosf(phase);
+            imagPtr[nn] = absval*sinf(phase);
+        }
+
+    // IFFT
+        m_fftprocess.ifft(realPtr,imagPtr, dataPtr);
+
+    }
+
+    return 0;
+}
+
+/*int FFTWOLATestAudio::processSynchronBlock(juce::AudioBuffer<float> & buffer, juce::MidiBuffer &midiMessages, int NrOfBlocksSinceLastProcessBlock)
 {
     juce::ignoreUnused(buffer, midiMessages, NrOfBlocksSinceLastProcessBlock);
     return 0;
-}
+}*/
 
 void FFTWOLATestAudio::addParameter(std::vector<std::unique_ptr<juce::RangedAudioParameter>> &paramVector)
 {

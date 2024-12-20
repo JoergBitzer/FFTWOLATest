@@ -5,6 +5,7 @@
 
 #include "tools/SynchronBlockProcessor.h"
 #include "PluginSettings.h"
+#include "FFT.h"
 
 class FFTWOLATestAudioProcessor;
 
@@ -20,13 +21,13 @@ const struct
 }g_paramExample;
 
 
-class FFTWOLATestAudio : public SynchronBlockProcessor
+class FFTWOLATestAudio : public WOLA
 {
 public:
     FFTWOLATestAudio(FFTWOLATestAudioProcessor* processor);
     void prepareToPlay(double sampleRate, int max_samplesPerBlock, int max_channels);
-    virtual int processSynchronBlock(juce::AudioBuffer<float>&, juce::MidiBuffer& midiMessages, int NrOfBlocksSinceLastProcessBlock);
-
+    //virtual int processSynchronBlock(juce::AudioBuffer<float>&, juce::MidiBuffer& midiMessages, int NrOfBlocksSinceLastProcessBlock);
+	virtual int processWOLA(juce::AudioBuffer<float>&, juce::MidiBuffer& midiMessages);
     // parameter handling
   	void addParameter(std::vector < std::unique_ptr<juce::RangedAudioParameter>>& paramVector);
     void prepareParameter(std::unique_ptr<juce::AudioProcessorValueTreeState>&  vts);
@@ -37,6 +38,11 @@ public:
 private:
 	FFTWOLATestAudioProcessor* m_processor;
     int m_Latency = 0;
+
+	int m_synchronblocksize = 0;
+	spectrum m_fftprocess;
+	juce::AudioBuffer<float> m_realdata;
+	juce::AudioBuffer<float> m_imagdata;
 };
 
 class FFTWOLATestGUI : public juce::Component

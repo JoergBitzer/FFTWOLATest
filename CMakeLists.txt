@@ -66,6 +66,7 @@ target_sources(${TARGET_NAME}
         PluginEditor.cpp
         PluginProcessor.cpp
         FFTWOLATest.cpp
+        FFT.cpp
         tools/MidiModPitchState.cpp
         tools/PresetHandler.cpp
         tools/SynchronBlockProcessor.cpp
